@@ -23,9 +23,27 @@ struct MiniGameView: View {
     @State private var finalScore = 0
     
     private let maxMissedEggs = 3
-    private let panWidth: CGFloat = 80
-    private let eggSize: CGFloat = 30
-    private let gameAreaHeight: CGFloat = 500
+    
+    // Adaptive sizing based on device
+    private var panWidth: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 120 : 80
+    }
+    
+    private var eggSize: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 45 : 30
+    }
+    
+    private var gameAreaHeight: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 700 : 500
+    }
+    
+    private var controlButtonSize: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 80 : 60
+    }
+    
+    private var controlSpacing: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 80 : 40
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -37,13 +55,22 @@ struct MiniGameView: View {
                 VStack(spacing: 0) {
                     // Header
                     HStack {
-                        Button(action: {
-                            stopGame()
-                            dismiss()
-                        }) {
+                        // Show close button only when game is playing
+                        if gameState == .playing {
+                            Button(action: {
+                                stopGame()
+                                resetGame()
+                                dismiss()
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(AppColors.accent)
+                            }
+                        } else {
+                            // Invisible spacer for layout consistency
                             Image(systemName: "xmark.circle.fill")
                                 .font(.title2)
-                                .foregroundColor(AppColors.accent)
+                                .foregroundColor(.clear)
                         }
                         
                         Spacer()
@@ -118,29 +145,29 @@ struct MiniGameView: View {
                         VStack(spacing: 24) {
                             VStack(spacing: 12) {
                                 Text("Ready to catch some eggs?")
-                                    .font(.title2)
+                                    .font(UIDevice.current.userInterfaceIdiom == .pad ? .largeTitle : .title2)
                                     .fontWeight(.bold)
                                     .foregroundColor(AppColors.textPrimary)
                                 
                                 Text("Use the buttons below to move your pan and catch falling eggs. Don't let 3 eggs fall!")
-                                    .font(.body)
+                                    .font(UIDevice.current.userInterfaceIdiom == .pad ? .title3 : .body)
                                     .foregroundColor(AppColors.textSecondary)
                                     .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 40)
+                                    .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 80 : 40)
                             }
                             
                             Button(action: startGame) {
                                 HStack {
                                     Image(systemName: "play.fill")
-                                        .font(.headline)
+                                        .font(UIDevice.current.userInterfaceIdiom == .pad ? .title2 : .headline)
                                     
                                     Text("Start Game")
-                                        .font(.headline)
+                                        .font(UIDevice.current.userInterfaceIdiom == .pad ? .title2 : .headline)
                                         .fontWeight(.semibold)
                                 }
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 56)
+                                .frame(height: UIDevice.current.userInterfaceIdiom == .pad ? 70 : 56)
                                 .background(
                                     LinearGradient(
                                         colors: [AppColors.primary, AppColors.primary.opacity(0.8)],
@@ -151,14 +178,15 @@ struct MiniGameView: View {
                                 .cornerRadius(16)
                                 .shadow(color: AppColors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
                             }
-                            .padding(.horizontal, 40)
+                            .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 80 : 40)
+                            .padding(.bottom, 60)
                         }
                     } else if gameState == .playing {
-                        // Movement Controls
-                        HStack(spacing: 40) {
+                        // Movement Controls - Adaptive for iPad
+                        HStack(spacing: controlSpacing) {
                             Button(action: movePanLeft) {
                                 Image(systemName: "arrow.left.circle.fill")
-                                    .font(.system(size: 60))
+                                    .font(.system(size: controlButtonSize))
                                     .foregroundColor(AppColors.primary)
                             }
                             .scaleEffect(1.0)
@@ -168,13 +196,13 @@ struct MiniGameView: View {
                             
                             Button(action: movePanRight) {
                                 Image(systemName: "arrow.right.circle.fill")
-                                    .font(.system(size: 60))
+                                    .font(.system(size: controlButtonSize))
                                     .foregroundColor(AppColors.primary)
                             }
                             .scaleEffect(1.0)
                             .animation(.easeInOut(duration: 0.1), value: panPosition)
                         }
-                        .padding(.horizontal, 60)
+                        .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 100 : 60)
                     }
                     
                     Spacer()
@@ -182,6 +210,10 @@ struct MiniGameView: View {
             }
             .onAppear {
                 screenWidth = geometry.size.width
+                // Reset game state when view appears
+                if gameState == .gameOver {
+                    resetGame()
+                }
             }
         }
         .sheet(isPresented: $showingGameOver) {
@@ -286,14 +318,16 @@ struct MiniGameView: View {
     }
     
     private func movePanLeft() {
-        let newPosition = max(panPosition - 30, -(screenWidth / 2 - panWidth / 2))
+        let moveDistance: CGFloat = UIDevice.current.userInterfaceIdiom == .pad ? 50 : 30
+        let newPosition = max(panPosition - moveDistance, -(screenWidth / 2 - panWidth / 2))
         withAnimation(.easeOut(duration: 0.1)) {
             panPosition = newPosition
         }
     }
     
     private func movePanRight() {
-        let newPosition = min(panPosition + 30, (screenWidth / 2 - panWidth / 2))
+        let moveDistance: CGFloat = UIDevice.current.userInterfaceIdiom == .pad ? 50 : 30
+        let newPosition = min(panPosition + moveDistance, (screenWidth / 2 - panWidth / 2))
         withAnimation(.easeOut(duration: 0.1)) {
             panPosition = newPosition
         }
@@ -345,28 +379,28 @@ struct GameOverView: View {
             // Game Over Animation
             VStack(spacing: 20) {
                 Text(score > 10 ? "🏆" : score > 5 ? "🎉" : "💪")
-                    .font(.system(size: 80))
+                    .font(.system(size: UIDevice.current.userInterfaceIdiom == .pad ? 120 : 80))
                 
                 Text("Game Over!")
-                    .font(.largeTitle)
+                    .font(UIDevice.current.userInterfaceIdiom == .pad ? .system(size: 48, weight: .bold) : .largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(AppColors.textPrimary)
                 
                 VStack(spacing: 8) {
                     Text("Focus Points Earned")
-                        .font(.headline)
+                        .font(UIDevice.current.userInterfaceIdiom == .pad ? .title2 : .headline)
                         .foregroundColor(AppColors.textSecondary)
                     
                     Text("\(score)")
-                        .font(.system(size: 48, weight: .bold))
+                        .font(.system(size: UIDevice.current.userInterfaceIdiom == .pad ? 64 : 48, weight: .bold))
                         .foregroundColor(AppColors.primary)
                 }
                 
                 Text(getEncouragementMessage(for: score))
-                    .font(.body)
+                    .font(UIDevice.current.userInterfaceIdiom == .pad ? .title3 : .body)
                     .foregroundColor(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 80 : 40)
             }
             
             Spacer()
@@ -376,15 +410,15 @@ struct GameOverView: View {
                 Button(action: onPlayAgain) {
                     HStack {
                         Image(systemName: "arrow.clockwise")
-                            .font(.headline)
+                            .font(UIDevice.current.userInterfaceIdiom == .pad ? .title2 : .headline)
                         
                         Text("Play Again")
-                            .font(.headline)
+                            .font(UIDevice.current.userInterfaceIdiom == .pad ? .title2 : .headline)
                             .fontWeight(.semibold)
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 56)
+                    .frame(height: UIDevice.current.userInterfaceIdiom == .pad ? 70 : 56)
                     .background(
                         LinearGradient(
                             colors: [AppColors.primary, AppColors.primary.opacity(0.8)],
@@ -398,11 +432,11 @@ struct GameOverView: View {
                 
                 Button(action: onDismiss) {
                     Text("Back to Studio")
-                        .font(.headline)
+                        .font(UIDevice.current.userInterfaceIdiom == .pad ? .title2 : .headline)
                         .fontWeight(.medium)
                         .foregroundColor(AppColors.textPrimary)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 56)
+                        .frame(height: UIDevice.current.userInterfaceIdiom == .pad ? 70 : 56)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(Color.white.opacity(0.8))
@@ -413,8 +447,8 @@ struct GameOverView: View {
                         )
                 }
             }
-            .padding(.horizontal, 32)
-            .padding(.bottom, 50)
+            .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 60 : 32)
+            .padding(.bottom, UIDevice.current.userInterfaceIdiom == .pad ? 80 : 50)
         }
         .background(AppColors.background.ignoresSafeArea())
     }

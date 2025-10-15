@@ -57,7 +57,7 @@ struct S2011App: App {
     
     private func check_data() {
         
-        let lastDate = "16.10.2025"
+        let lastDate = "21.10.2025"
         
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd.MM.yyyy"

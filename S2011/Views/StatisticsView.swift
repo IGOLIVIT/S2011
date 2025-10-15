@@ -311,3 +311,4 @@ struct SessionCard: View {
     StatisticsView()
         .environmentObject(AppData())
 }
+
